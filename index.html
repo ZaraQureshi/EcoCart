@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Stlite app</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.90.7/build/stlite.css"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+import { mount } from "https://cdn.jsdelivr.net/npm/@stlite/browser@0.90.7/build/stlite.js"
+mount(
+  {
+    requirements: ["matplotlib", "networkx"],
+    entrypoint: "streamlit_app.py",
+    files: {
+"streamlit_app.py": `import streamlit as st
+import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Configure Streamlit page matrix layout to wide mode
+st.set_page_config(layout="wide", page_title="EcoCart Algorithmic Scalability Engine")
+
+# ---------------------------------------------------------
+# 1. HARDCODED LOGISTICS NETWORK DESIGN MATRIX
+# ---------------------------------------------------------
+urban_graph = {
+    'W': {'A': 2, 'B': 5}, 'A': {'C': 3}, 'B': {'E': 6},
+    'C': {'F': 2, 'D': 4}, 'D': {'F': 3, 'G': 5}, 'E': {'G': 3},
+    'F': {'H': 2}, 'G': {'H': 1}, 'H': {}
+}
+urban_heuristics = {'W': 10, 'A': 10, 'B': 8, 'C': 7, 'D': 6, 'E': 7, 'F': 3, 'G': 2, 'H': 0}
+
+rural_graph = {
+    'S': {'A': 12, 'B': 18}, 'A': {'C': 15, 'D': 20}, 'B': {'D': 14},
+    'C': {'E': 10}, 'D': {'E': 16, 'F': 22}, 'E': {'G': 12},
+    'F': {'G': 18}, 'G': {'T': 8}, 'T': {}
+}
+rural_heuristics = {'S': 55, 'A': 40, 'B': 45, 'C': 28, 'D': 35, 'E': 20, 'F': 38, 'G': 10, 'T': 0}
+
+# Hardcoded performance metrics derived precisely from the uploaded charts
+metrics_db = {
+    "Urban": {
+        "A*": {"cost": 9, "expanded": 5, "time": 0.086, "memory": 11.2, "path": ['W', 'A', 'C', 'F', 'H']},
+        "IDA*": {"cost": 9, "expanded": 5, "time": 0.040, "memory": 5.1, "path": ['W', 'A', 'C', 'F', 'H']}
+    },
+    "Rural": {
+        "A*": {"cost": 57, "expanded": 6, "time": 0.060, "memory": 14.7, "path": ['S', 'A', 'C', 'E', 'G', 'T']},
+        "IDA*": {"cost": 57, "expanded": 13, "time": 0.128, "memory": 7.6, "path": ['S', 'A', 'C', 'E', 'G', 'T']}
+    }
+}
+
+# ---------------------------------------------------------
+# 2. DASHBOARD FRAMEWORK VIEW
+# ---------------------------------------------------------
+st.title("📊 EcoCart Task 4: Scalability Framework Simulation")
+st.markdown("Comparative visualization panel evaluating algorithm performance differences across multi-scale transportation topologies.")
+
+# Top Configuration Widgets
+st.sidebar.header("Scenario Operations Control")
+environment = st.sidebar.radio("Select Network Environment Paradigm:", ["Urban Network Layout", "Rural Network Layout"])
+algorithm = st.sidebar.radio("Select Active Routing Paradigm:", ["A*", "IDA*"])
+
+env_key = "Urban" if "Urban" in environment else "Rural"
+active_graph = urban_graph if env_key == "Urban" else rural_graph
+active_heuristics = urban_heuristics if env_key == "Urban" else rural_heuristics
+start_node = 'W' if env_key == "Urban" else 'S'
+goal_node = 'H' if env_key == "Urban" else 'T'
+
+# Extract performance numbers
+run_metrics = metrics_db[env_key][algorithm]
+
+# Render Metric Analytics Row
+st.subheader(f"⚡ Live Dispatch Execution Profile: {env_key} Setup using {algorithm}")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Optimized Path Cost", f"{run_metrics['cost']} Units")
+m2.metric("Total Intersections Expanded", f"{run_metrics['expanded']} Nodes")
+m3.metric("Measured Runtime Overhead", f"{run_metrics['time']:.3f} ms")
+m4.metric("Relative System RAM footprint", f"{run_metrics['memory']} Units")
+
+st.success(f"**Dispatched Vehicle Tracking Manifest Matrix:** \`{' ➔ '.join(run_metrics['path'])}\`")
+
+# ---------------------------------------------------------
+# 3. SPATIAL TOPOLOGY MAPPING GRAPH VISUALIZATION
+# ---------------------------------------------------------
+st.subheader("🌐 Active Spatial Network Topology")
+fig_graph, ax_graph = plt.subplots(figsize=(10, 4.5))
+
+G = nx.DiGraph()
+for src, targets in active_graph.items():
+    for dest, weight in targets.items():
+        G.add_edge(src, dest, weight=weight)
+
+# Fixed presentation layouts mimicking assignments diagrams
+if env_key == "Urban":
+    pos_map = {'W': (0, 1), 'A': (1, 2), 'B': (1, 0), 'C': (2, 2.3), 'D': (2, 1), 'E': (2, -0.3), 'F': (3, 1.8), 'G': (3, 0.2), 'H': (4, 1)}
+else:
+    pos_map = {'S': (0, 1), 'A': (1, 2), 'B': (1, 0), 'C': (2, 2.5), 'D': (2, 1), 'E': (3, 1.8), 'F': (3, 0.2), 'G': (4, 1), 'T': (5, 1)}
+
+path_seq = run_metrics['path']
+
+# Configure dynamic node coloring
+node_colors = []
+for n in G.nodes():
+    if n == start_node: node_colors.append("#22c55e") # Green Hub
+    elif n == goal_node: node_colors.append("#ef4444") # Red Target Destination
+    elif n in path_seq: node_colors.append("#60a5fa") # Highlighting active choices
+    else: node_colors.append("#cbd5e1")
+
+# Configure dynamic edge color vectors
+edge_colors = []
+for u, v in G.edges():
+    if u in path_seq and v in path_seq and path_seq.index(v) == path_seq.index(u) + 1:
+        edge_colors.append("#2563eb") # Thick bold blue for calculated route
+    else:
+        edge_colors.append("#94a3b8")
+
+# Draw operations 
+nx.draw_networkx_nodes(G, pos_map, node_color=node_colors, node_size=600, ax=ax_graph)
+nx.draw_networkx_labels(G, pos_map, font_size=11, font_weight="bold", ax=ax_graph)
+nx.draw_networkx_edges(G, pos_map, edge_color=edge_colors, width=2.5, arrowsize=15, ax=ax_graph)
+edge_labels = nx.get_edge_attributes(G, 'weight')
+nx.draw_networkx_edge_labels(G, pos_map, edge_labels=edge_labels, font_size=9, ax=ax_graph)
+
+# Render heuristic annotations over nodes
+for node, h_val in active_heuristics.items():
+    x, y = pos_map[node]
+    ax_graph.text(x, y + 0.22, f"h={h_val}", fontsize=9, color="#475569", ha='center', weight='semibold')
+
+ax_graph.axis('off')
+st.pyplot(fig_graph)
+
+# ---------------------------------------------------------
+# 4. BENCHMARK COMPARATIVE ANALYSIS CHARTS (MATCHING CHARTS)
+# ---------------------------------------------------------
+st.subheader("📊 Fleet Benchmarking Analytics Reports")
+fig_charts, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 4.5))
+
+# Chart 1: Nodes Expanded
+labels = ['Urban-A*', 'Rural-A*', 'Urban-IDA*', 'Rural-IDA*']
+expanded_vals = [metrics_db["Urban"]["A*"]["expanded"], metrics_db["Rural"]["A*"]["expanded"],
+                 metrics_db["Urban"]["IDA*"]["expanded"], metrics_db["Rural"]["IDA*"]["expanded"]]
+ax1.bar(labels, expanded_vals, color=['#3b82f6', '#3b82f6', '#f97316', '#f97316'])
+ax1.set_title("Nodes Expanded (Lower is Better)", fontweight='bold')
+ax1.set_ylabel("Node Expansion Count")
+ax1.grid(axis='y', linestyle='--', alpha=0.4)
+ax1.set_xticklabels(labels, rotation=15)
+
+# Chart 2: Execution Time (Grouped Bars)
+x_indexes = np.arange(2)
+bar_width = 0.35
+ax2.bar(x_indexes - bar_width/2, [metrics_db["Urban"]["A*"]["time"], metrics_db["Rural"]["A*"]["time"]], bar_width, label='A*', color='#3b82f6')
+ax2.bar(x_indexes + bar_width/2, [metrics_db["Urban"]["IDA*"]["time"], metrics_db["Rural"]["IDA*"]["time"]], bar_width, label='IDA*', color='#f97316')
+ax2.set_xticks(x_indexes)
+ax2.set_xticklabels(['Urban Context', 'Rural Context'])
+ax2.set_ylabel("Processing Latency Time (ms)")
+ax2.set_title("Execution Time (ms)", fontweight='bold')
+ax2.legend()
+ax2.grid(axis='y', linestyle='--', alpha=0.4)
+
+# Chart 3: Memory Allocations footprint
+mem_labels = ['Urban A*', 'Urban IDA*', 'Rural A*', 'Rural IDA*']
+mem_vals = [metrics_db["Urban"]["A*"]["memory"], metrics_db["Urban"]["IDA*"]["memory"],
+            metrics_db["Rural"]["A*"]["memory"], metrics_db["Rural"]["IDA*"]["memory"]]
+ax3.bar(mem_labels, mem_vals, color=['#3b82f6', '#f97316', '#3b82f6', '#f97316'])
+ax3.set_title("Estimated Memory Footprint", fontweight='bold')
+ax3.set_ylabel("Relative Memory Units")
+ax3.grid(axis='y', linestyle='--', alpha=0.4)
+ax3.set_xticklabels(mem_labels, rotation=15)
+
+plt.tight_layout()
+st.pyplot(fig_charts)`,
+
+},
+  },
+  document.getElementById("root")
+)
+
+    </script>
+  </body>
+  <!-- Generated from Stlite Sharing (https://edit.share.stlite.net/), and the source version is 29df9cb563d38f3bbdbf74b6224a933f51d24207 -->
+</html>
